@@ -1,36 +1,11 @@
-name: Decompile
-on:
-  workflow_dispatch:
-    inputs:
-      addrs:
-        description: "Adresses hex séparées par des espaces"
-        default: "81864360"
-jobs:
-  d:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-      - name: Ghidra
-        run: |
-          wget -q https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.2.1_build/ghidra_11.2.1_PUBLIC_20241105.zip
-          unzip -q ghidra_*.zip
-      - name: Extraire le segment de code
-        run: python3 -c "d=open('minecraft_pcse00491.elf','rb').read(); open('seg0.bin','wb').write(d[0xE0:0xE0+0xDA38FB])"
       - name: Décompiler
         env:
           ADDRS: ${{ inputs.addrs }}
         run: |
-          mkdir proj
+          mkdir -p proj
           ghidra_*/support/analyzeHeadless proj p -import seg0.bin \
             -loader BinaryLoader -loader-baseAddr 0x81000000 \
             -processor ARM:LE:32:v7 -noanalysis \
-            -scriptPath . -postScript Decomp.java out.c $ADDRS
+            -scriptPath "$GITHUB_WORKSPACE" \
+            -postScript Decomp.java "$GITHUB_WORKSPACE/out.c" $ADDRS
           head -n 300 out.c
-      - uses: actions/upload-artifact@v4
-        with:
-          name: decompile
-          path: out.c
